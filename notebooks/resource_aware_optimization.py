@@ -18,7 +18,7 @@ if __name__ == "__main__":
             "Please set OPENAI_API_KEY, GOOGLE_CUSTOM_SEARCH_API_KEY, and GOOGLE_CSE_ID in your .env file."
         )
 
-client = OpenAI(api_key=OPENAI_API_KEY or "dummy_key")
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 
 # --- Step 1: Classify the Prompt ---
