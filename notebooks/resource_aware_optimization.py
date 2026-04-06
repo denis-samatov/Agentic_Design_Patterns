@@ -137,8 +137,6 @@ def handle_prompt(prompt: str) -> dict:
 
 if __name__ == "__main__":
     test_prompt = "What is the capital of Australia?"
-    # test_prompt = "Explain the impact of quantum computing on cryptography."
-    # test_prompt = "When does the Australian Open 2026 start, give me full date?"
 
     result = handle_prompt(test_prompt)
     print("🔍 Classification:", result["classification"])
