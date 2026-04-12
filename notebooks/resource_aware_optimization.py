@@ -129,7 +129,10 @@ def handle_prompt(prompt: str) -> dict:
 
     search_results = None
     if classification == "internet_search":
-        search_results = google_search(prompt)
+        try:
+            search_results = google_search(prompt)
+        except Exception as e:
+            search_results = {"error": str(e)}
         # print("\n🔍 Search Results:", search_results)
 
     answer, model = generate_response(prompt, classification, search_results)
