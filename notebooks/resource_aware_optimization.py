@@ -81,12 +81,13 @@ def google_search(query: str, num_results=1):
 
 # --- Step 3: Generate Response ---
 def generate_response(prompt: str, classification: str, search_results=None) -> str:
+    messages = []
     if classification == "simple":
         model = "gpt-4o-mini"
-        full_prompt = prompt
+        messages.append({"role": "user", "content": prompt})
     elif classification == "reasoning":
         model = "o1-mini"
-        full_prompt = prompt
+        messages.append({"role": "user", "content": prompt})
     elif classification == "internet_search":
         model = "gpt-4o"
         # Convert each search result dict to a readable string
@@ -101,19 +102,22 @@ def generate_response(prompt: str, classification: str, search_results=None) -> 
             search_context = f"Error during search: {search_results['error']}"
         else:
             search_context = "No search results found."
-        full_prompt = f"""Use the following web results to answer the user query:
 
-{search_context}
-
-Query: {prompt}"""
+        messages.append(
+            {
+                "role": "system",
+                "content": f"Use the following web results to answer the user query:\n\n{search_context}",
+            }
+        )
+        messages.append({"role": "user", "content": prompt})
     else:
         # Default or error case
         model = "gpt-4o-mini"
-        full_prompt = prompt
+        messages.append({"role": "user", "content": prompt})
 
     response = client.chat.completions.create(
         model=model,
-        messages=[{"role": "user", "content": full_prompt}],
+        messages=messages,
         temperature=1,
     )
 
