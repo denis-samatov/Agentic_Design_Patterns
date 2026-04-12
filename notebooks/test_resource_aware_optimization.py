@@ -193,5 +193,93 @@ class TestGoogleSearch(unittest.TestCase):
         self.assertEqual(result, {"error": "Connection error"})
         mock_requests.get.assert_called_once()
 
+class TestHandlePrompt(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # Mock external dependencies before importing the module under test
+        cls.original_modules = {
+            'requests': sys.modules.get('requests'),
+            'dotenv': sys.modules.get('dotenv'),
+            'openai': sys.modules.get('openai')
+        }
+        sys.modules['requests'] = mock_requests
+        sys.modules['dotenv'] = mock_dotenv
+        sys.modules['openai'] = mock_openai
+
+        # Now it's safe to import the function
+        from notebooks.resource_aware_optimization import handle_prompt
+        cls.handle_prompt = staticmethod(handle_prompt)
+
+    @classmethod
+    def tearDownClass(cls):
+        # Restore original modules
+        for name, module in cls.original_modules.items():
+            if module is None:
+                del sys.modules[name]
+            else:
+                sys.modules[name] = module
+
+    @patch('notebooks.resource_aware_optimization.classify_prompt')
+    @patch('notebooks.resource_aware_optimization.generate_response')
+    def test_handle_prompt_simple(self, mock_generate, mock_classify):
+        mock_classify.return_value = {"classification": "simple"}
+        mock_generate.return_value = ("Simple answer", "gpt-4o-mini")
+
+        result = self.handle_prompt("Simple question")
+
+        self.assertEqual(result["classification"], "simple")
+        self.assertEqual(result["response"], "Simple answer")
+        self.assertEqual(result["model"], "gpt-4o-mini")
+        mock_generate.assert_called_once_with("Simple question", "simple", None)
+
+    @patch('notebooks.resource_aware_optimization.classify_prompt')
+    @patch('notebooks.resource_aware_optimization.generate_response')
+    def test_handle_prompt_reasoning(self, mock_generate, mock_classify):
+        mock_classify.return_value = {"classification": "reasoning"}
+        mock_generate.return_value = ("Reasoning answer", "o1-mini")
+
+        result = self.handle_prompt("Complex question")
+
+        self.assertEqual(result["classification"], "reasoning")
+        self.assertEqual(result["response"], "Reasoning answer")
+        self.assertEqual(result["model"], "o1-mini")
+        mock_generate.assert_called_once_with("Complex question", "reasoning", None)
+
+    @patch('notebooks.resource_aware_optimization.classify_prompt')
+    @patch('notebooks.resource_aware_optimization.google_search')
+    @patch('notebooks.resource_aware_optimization.generate_response')
+    def test_handle_prompt_internet_search_success(self, mock_generate, mock_search, mock_classify):
+        mock_classify.return_value = {"classification": "internet_search"}
+        search_results = [{"title": "Result", "snippet": "Snippet", "link": "url"}]
+        mock_search.return_value = search_results
+        mock_generate.return_value = ("Search answer", "gpt-4o")
+
+        result = self.handle_prompt("Current event question")
+
+        self.assertEqual(result["classification"], "internet_search")
+        self.assertEqual(result["response"], "Search answer")
+        self.assertEqual(result["model"], "gpt-4o")
+        mock_search.assert_called_once_with("Current event question")
+        mock_generate.assert_called_once_with("Current event question", "internet_search", search_results)
+
+    @patch('notebooks.resource_aware_optimization.classify_prompt')
+    @patch('notebooks.resource_aware_optimization.google_search')
+    @patch('notebooks.resource_aware_optimization.generate_response')
+    def test_handle_prompt_internet_search_error(self, mock_generate, mock_search, mock_classify):
+        mock_classify.return_value = {"classification": "internet_search"}
+        search_error = {"error": "API Key Invalid"}
+        mock_search.return_value = search_error
+        mock_generate.return_value = ("Error-based answer", "gpt-4o")
+
+        result = self.handle_prompt("Current event question")
+
+        self.assertEqual(result["classification"], "internet_search")
+        self.assertEqual(result["response"], "Error-based answer")
+        self.assertEqual(result["model"], "gpt-4o")
+        mock_search.assert_called_once_with("Current event question")
+        # Here we check if the error was passed to generate_response
+        mock_generate.assert_called_once_with("Current event question", "internet_search", search_error)
+
 if __name__ == '__main__':
     unittest.main()
