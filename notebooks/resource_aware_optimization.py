@@ -60,7 +60,7 @@ def google_search(query: str, num_results=1):
     }
 
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         results = response.json()
 
