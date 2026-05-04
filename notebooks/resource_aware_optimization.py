@@ -21,6 +21,24 @@ if __name__ == "__main__":
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
+def _safe_json_parse(text: str) -> dict:
+    """
+    Safely parse JSON from LLM response, handling markdown code blocks.
+    """
+    try:
+        # Remove markdown code block markers if present
+        cleaned_text = text.strip()
+        if cleaned_text.startswith("```json"):
+            cleaned_text = cleaned_text[7:]
+        elif cleaned_text.startswith("```"):
+            cleaned_text = cleaned_text[3:]
+        if cleaned_text.endswith("```"):
+            cleaned_text = cleaned_text[:-3]
+        return json.loads(cleaned_text.strip())
+    except (json.JSONDecodeError, AttributeError):
+        return None
+
+
 # --- Step 1: Classify the Prompt ---
 def classify_prompt(prompt: str) -> dict:
     system_message = {
@@ -46,7 +64,10 @@ def classify_prompt(prompt: str) -> dict:
     )
 
     reply = response.choices[0].message.content
-    return json.loads(reply)
+    parsed = _safe_json_parse(reply)
+    if parsed is None:
+        return {"classification": "simple"}
+    return parsed
 
 
 # --- Step 2: Google Search ---

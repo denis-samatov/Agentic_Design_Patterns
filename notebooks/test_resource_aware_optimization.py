@@ -104,10 +104,26 @@ class TestClassifyPrompt(unittest.TestCase):
         ]
         mock_create.return_value = mock_response
 
-        # Call the function and assert it raises json.JSONDecodeError
+        # Call the function and assert it returns fallback
         prompt = "test prompt"
-        with self.assertRaises(json.JSONDecodeError):
-            self.classify_prompt(prompt)
+        result = self.classify_prompt(prompt)
+        self.assertEqual(result, {"classification": "simple"})
+
+    @patch('notebooks.resource_aware_optimization.client.chat.completions.create')
+    def test_classify_prompt_markdown_json(self, mock_create):
+        # Setup mock response with markdown JSON
+        mock_response = MagicMock()
+        mock_response.choices = [
+            MagicMock(message=MagicMock(content='```json\n{"classification": "reasoning"}\n```'))
+        ]
+        mock_create.return_value = mock_response
+
+        # Call the function
+        prompt = "test prompt"
+        result = self.classify_prompt(prompt)
+
+        # Assertions
+        self.assertEqual(result, {"classification": "reasoning"})
 
 class TestGoogleSearch(unittest.TestCase):
 
