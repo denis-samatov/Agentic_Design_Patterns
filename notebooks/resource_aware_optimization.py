@@ -23,20 +23,36 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 def _safe_json_parse(text: str) -> dict:
     """
-    Safely parse JSON from LLM response, handling markdown code blocks.
+    Safely parse JSON from LLM response, handling markdown code blocks and leading/trailing text.
     """
-    try:
-        # Remove markdown code block markers if present
-        cleaned_text = text.strip()
-        if cleaned_text.startswith("```json"):
-            cleaned_text = cleaned_text[7:]
-        elif cleaned_text.startswith("```"):
-            cleaned_text = cleaned_text[3:]
-        if cleaned_text.endswith("```"):
-            cleaned_text = cleaned_text[:-3]
-        return json.loads(cleaned_text.strip())
-    except (json.JSONDecodeError, AttributeError):
+    if not isinstance(text, str):
         return None
+
+    try:
+        # 1. Try direct parsing
+        return json.loads(text.strip())
+    except (json.JSONDecodeError, AttributeError):
+        pass
+
+    # 2. Try to extract JSON from markdown blocks
+    # Use regex to find content between ```json and ``` or ``` and ```
+    import re
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1).strip())
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
+    # 3. Fallback: try to find anything that looks like a JSON object
+    match = re.search(r"(\{.*?\})", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1).strip())
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
+    return None
 
 
 # --- Step 1: Classify the Prompt ---
@@ -59,6 +75,7 @@ def classify_prompt(prompt: str) -> dict:
 
     user_message = {"role": "user", "content": prompt}
 
+    # Added temperature=1 to match the pattern in other parts of the codebase
     response = client.chat.completions.create(
         model="gpt-4o", messages=[system_message, user_message], temperature=1
     )
