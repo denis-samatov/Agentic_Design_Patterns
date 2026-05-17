@@ -14,6 +14,61 @@ mock_requests.exceptions.RequestException = MockRequestException
 mock_dotenv = MagicMock()
 mock_openai = MagicMock()
 
+class TestSafeJsonParse(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # Mock external dependencies before importing the module under test
+        cls.original_modules = {
+            'requests': sys.modules.get('requests'),
+            'dotenv': sys.modules.get('dotenv'),
+            'openai': sys.modules.get('openai')
+        }
+        sys.modules['requests'] = mock_requests
+        sys.modules['dotenv'] = mock_dotenv
+        sys.modules['openai'] = mock_openai
+
+        # Now it's safe to import the function
+        from notebooks.resource_aware_optimization import _safe_json_parse
+        cls._safe_json_parse = staticmethod(_safe_json_parse)
+
+    @classmethod
+    def tearDownClass(cls):
+        # Restore original modules
+        for name, module in cls.original_modules.items():
+            if module is None:
+                del sys.modules[name]
+            else:
+                sys.modules[name] = module
+
+    def test_safe_json_parse_plain(self):
+        text = '{"key": "value"}'
+        result = self._safe_json_parse(text)
+        self.assertEqual(result, {"key": "value"})
+
+    def test_safe_json_parse_markdown_json(self):
+        text = '```json\n{"key": "value"}\n```'
+        result = self._safe_json_parse(text)
+        self.assertEqual(result, {"key": "value"})
+
+    def test_safe_json_parse_markdown_plain(self):
+        text = '```\n{"key": "value"}\n```'
+        result = self._safe_json_parse(text)
+        self.assertEqual(result, {"key": "value"})
+
+    def test_safe_json_parse_invalid_json(self):
+        text = 'invalid json'
+        result = self._safe_json_parse(text)
+        self.assertIsNone(result)
+
+    def test_safe_json_parse_none(self):
+        result = self._safe_json_parse(None)
+        self.assertIsNone(result)
+
+    def test_safe_json_parse_empty(self):
+        result = self._safe_json_parse("")
+        self.assertIsNone(result)
+
 class TestClassifyPrompt(unittest.TestCase):
 
     @classmethod
