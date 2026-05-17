@@ -148,8 +148,6 @@ def generate_response(prompt: str, classification: str, search_results=None) -> 
 # --- Step 4: Combined Router ---
 def handle_prompt(prompt: str) -> dict:
     classification_result = classify_prompt(prompt)
-    # Remove or comment out the next line to avoid duplicate printing
-    # print("\n🔍 Classification Result:", classification_result)
     classification = classification_result["classification"]
 
     search_results = None
@@ -158,7 +156,6 @@ def handle_prompt(prompt: str) -> dict:
             search_results = google_search(prompt)
         except Exception as e:
             search_results = {"error": str(e)}
-        # print("\n🔍 Search Results:", search_results)
 
     answer, model = generate_response(prompt, classification, search_results)
     return {"classification": classification, "response": answer, "model": model}
