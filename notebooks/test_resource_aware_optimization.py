@@ -86,6 +86,9 @@ class TestClassifyPrompt(unittest.TestCase):
         # Now it's safe to import the function
         from notebooks.resource_aware_optimization import classify_prompt
         cls.classify_prompt = staticmethod(classify_prompt)
+        # Requests are injected now that importing the module is side-effect free.
+        import notebooks.resource_aware_optimization as router
+        router.client = mock_openai.OpenAI.return_value
 
     @classmethod
     def tearDownClass(cls):

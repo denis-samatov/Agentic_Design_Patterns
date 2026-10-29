@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 
-# Load environment variables
-load_dotenv()
+# A library import must not load credentials from a working-directory .env.
+if __name__ == "__main__":
+    load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GOOGLE_CUSTOM_SEARCH_API_KEY = os.getenv("GOOGLE_CUSTOM_SEARCH_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
@@ -18,10 +19,20 @@ if __name__ == "__main__":
             "Please set OPENAI_API_KEY, GOOGLE_CUSTOM_SEARCH_API_KEY, and GOOGLE_CSE_ID in your .env file."
         )
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = None
 
 
-def _safe_json_parse(text: str) -> dict:
+def _get_client():
+    global client
+    if client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY is required for model requests")
+        client = OpenAI(api_key=api_key)
+    return client
+
+
+def _safe_json_parse(text: str) -> dict | None:
     """
     Safely parse JSON from LLM response, handling markdown code blocks and leading/trailing text.
     """
@@ -30,7 +41,8 @@ def _safe_json_parse(text: str) -> dict:
 
     try:
         # 1. Try direct parsing
-        return json.loads(text.strip())
+        value = json.loads(text.strip())
+        return value if isinstance(value, dict) else None
     except (json.JSONDecodeError, AttributeError):
         pass
 
@@ -76,13 +88,15 @@ def classify_prompt(prompt: str) -> dict:
     user_message = {"role": "user", "content": prompt}
 
     # Added temperature=1 to match the pattern in other parts of the codebase
-    response = client.chat.completions.create(
+    response = _get_client().chat.completions.create(
         model="gpt-4o", messages=[system_message, user_message], temperature=1
     )
 
     reply = response.choices[0].message.content
     parsed = _safe_json_parse(reply)
-    if parsed is None:
+    if parsed is None or parsed.get("classification") not in (
+        "simple", "reasoning", "internet_search"
+    ):
         return {"classification": "simple"}
     return parsed
 
@@ -153,7 +167,7 @@ def generate_response(prompt: str, classification: str, search_results=None) -> 
         model = "gpt-4o-mini"
         messages.append({"role": "user", "content": prompt})
 
-    response = client.chat.completions.create(
+    response = _get_client().chat.completions.create(
         model=model,
         messages=messages,
         temperature=1,
