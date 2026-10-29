@@ -1,0 +1,5 @@
+# Only the runnable resource_aware_optimization example and its offline tests.
+openai
+requests>=2.33.0,<3
+python-dotenv
+pytest
