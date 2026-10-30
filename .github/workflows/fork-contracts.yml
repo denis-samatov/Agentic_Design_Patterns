@@ -1,0 +1,24 @@
+name: Resource-aware example contracts
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --require-hashes -r requirements-ci.lock
+      - run: python -m pip check
+      - name: Audit the exact CI dependency profile
+        run: python -m pip_audit --no-deps --disable-pip --strict -r requirements-ci.lock
+      - run: python -m ruff check --select E9,F821,F822,F823 notebooks/resource_aware_optimization.py notebooks/test_router_contract.py
+      - run: python -m pytest notebooks -q
