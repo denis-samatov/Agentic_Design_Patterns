@@ -18,3 +18,9 @@ For the repaired runnable example only, install the hash-pinned profile with
 `pip install --require-hashes -r requirements-example.lock` and run
 `python -m pytest notebooks -q`. The other book examples are not qualified by
 that environment or by the offline router tests.
+
+## Offline qualification
+
+The `Resource-aware example contracts` workflow installs `requirements-ci.lock` with hashes, checks critical Python errors, runs the26 resource-aware routing regressions and audits that exact profile with pip-audit. The example-only `requirements-example.lock` is also audited locally. Regenerate the CI lock with `uv pip compile requirements-ci.in --python-version 3.13 --generate-hashes -o requirements-ci.lock`.
+
+These contracts validate JSON/schema fallback, missing-key preflight and client import behavior. They do not measure model routing quality, live search correctness, token cost or whole-book compatibility. No credentials are required; no model/provider requests are made by these tests. Upstream book authorship remains unchanged.
